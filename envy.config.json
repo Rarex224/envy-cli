@@ -1,0 +1,4 @@
+{
+  "roots": ["~/code"],
+  "ignore": ["legacy", "*-archive"]
+}
