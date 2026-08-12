@@ -1,0 +1,38 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  test:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-go@v5
+        with:
+          go-version-file: go.mod
+          cache: true
+
+      - name: Run tests
+        run: |
+          set -o pipefail
+          go test ./... -json | tee test-output.json
+
+      - name: Summarize results
+        if: always()
+        run: |
+          # Count top-level test functions (ignore subtests, which contain "/")
+          passed=$(jq -r 'select(.Action=="pass" and .Test != null and (.Test | contains("/") | not)) | .Test' test-output.json | sort -u | wc -l | tr -d ' ')
+          failed=$(jq -r 'select(.Action=="fail" and .Test != null and (.Test | contains("/") | not)) | .Test' test-output.json | sort -u | wc -l | tr -d ' ')
+          {
+            echo "## Test results"
+            echo ""
+            if [ "$failed" -eq 0 ]; then
+              echo "✅ **$passed tests passed**"
+            else
+              echo "❌ **$failed failed** · $passed passed"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
